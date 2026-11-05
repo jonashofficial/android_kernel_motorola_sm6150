@@ -72,7 +72,7 @@
 	"gHwFilterMode", \
 	0, \
 	3, \
-	3, \
+	1, \
 	CFG_VALUE_OR_DEFAULT, \
 	"hardware filter for DTIM mode")
 
@@ -142,7 +142,7 @@
  * gEnableModulatedDTIM - Enable/Disable modulated DTIM feature
  * @Min: 0
  * @Max: 5
- * @Default: 2
+ * @Default: 0
  *
  * This ini is used to enable/disable modulated DTIM feature.
  *
@@ -164,7 +164,7 @@
 	"gEnableModulatedDTIM", \
 	0, \
 	5, \
-	2, \
+	0, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Enable/disable modulated DTIM feature")
 
