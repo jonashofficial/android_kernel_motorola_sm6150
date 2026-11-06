@@ -17,11 +17,7 @@
 #define BOEFFLA_WL_BLOCKER_VERSION	"1.1.1"
 
 #define LIST_WL_DEFAULT \
-	"qcom_rx_wakelock;wlan;wlan_wow_wl;wlan_extscan_wl;wlan_pno_wl;wlan_ipa;wlan_cqm_wl;wlan_scan_wl;" \
-	"netmgr_wl;NETLINK;IPA_WS;rmnet_ipa;wcnss_filter_lock;" \
-	"hal_bluetooth_lock;bluesleep;bt_wake;" \
-	"smp2p-sleepstate;smdcntl0;smdcntl1;smdcntl2;smdcntl3;smdcntl4;smdcntl5;smdcntl6;smdcntl7;" \
-	"rmt_storage;tftp_server_wakelock;rpmb_access_wakelock;DIAG_WS;" \
+	"wlan_pno_wl;wlan_extscan_wl;" \
 	"CHG_PLCY_MAIN_WL;CHG_PLCY_SOH_WL;CHG_PLCY_QG_WL;CHG_PLCY_STD_PD_WL;CHG_PLCY_PPS_WL;" \
 	"CHG_PLCY_HVDCP2_WL;CHG_PLCY_HVDCP_WL;CHG_PLCY_CTM_WL;qcom-step-chg;epoll_hvdcp_opti;epoll_health;" \
 	"SensorsHAL_WAKEUP;AnyMotionDetector;ChimeExecutorApi;GCoreFlp;NlpWakeLock;NlpCollectorWakeLock;mcs"

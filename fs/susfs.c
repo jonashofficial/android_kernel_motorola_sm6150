@@ -563,6 +563,8 @@ void susfs_generic_fillattr_spoofer(struct inode *inode, struct kstat *stat, u32
 			goto out_spoof_kstat;
 		case STATX_SUS_KSTAT_FUSE:
 			fi = get_fuse_inode(inode);
+			if (!fi)
+				return;
 			target_ino = fi->inode.i_ino;
 			target_dev = fi->inode.i_sb->s_dev;
 			is_fuse = true;

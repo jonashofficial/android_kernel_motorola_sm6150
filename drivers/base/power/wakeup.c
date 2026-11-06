@@ -693,7 +693,7 @@ static bool check_for_block(struct wakeup_source *ws)
 static void wakeup_source_report_event(struct wakeup_source *ws, bool hard)
 {
 #ifdef CONFIG_BOEFFLA_WL_BLOCKER
-	if (check_for_block(ws))
+	if (!hard && check_for_block(ws))
 		return;
 #endif
 
@@ -723,15 +723,6 @@ void __pm_stay_awake(struct wakeup_source *ws)
 		return;
 
 	spin_lock_irqsave(&ws->lock, flags);
-
-#ifdef CONFIG_BOEFFLA_WL_BLOCKER
-	if (check_for_block(ws)) {
-		del_timer(&ws->timer);
-		ws->timer_expires = 0;
-		spin_unlock_irqrestore(&ws->lock, flags);
-		return;
-	}
-#endif
 
 	wakeup_source_report_event(ws, false);
 	del_timer(&ws->timer);
@@ -923,7 +914,7 @@ void pm_wakeup_ws_event(struct wakeup_source *ws, unsigned int msec, bool hard)
 	spin_lock_irqsave(&ws->lock, flags);
 
 #ifdef CONFIG_BOEFFLA_WL_BLOCKER
-	if (check_for_block(ws))
+	if (!hard && check_for_block(ws))
 		goto unlock;
 #endif
 
