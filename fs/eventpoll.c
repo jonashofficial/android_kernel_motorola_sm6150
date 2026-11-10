@@ -803,7 +803,12 @@ static int ep_remove(struct eventpoll *ep, struct epitem *epi)
 		list_del_init(&epi->rdllink);
 	spin_unlock_irqrestore(&ep->lock, flags);
 
-	wakeup_source_unregister(ep_wakeup_source(epi));
+	{
+		struct wakeup_source *ws = ep_wakeup_source(epi);
+		RCU_INIT_POINTER(epi->ws, NULL);
+		if (ws)
+			wakeup_source_unregister(ws);
+	}
 	/*
 	 * At this point it is safe to free the eventpoll item. Use the union
 	 * field epi->rcu, since we are trying to minimize the size of
@@ -1401,8 +1406,10 @@ static int ep_create_wakeup_source(struct epitem *epi)
 	 * alarm timers (e.g. CLOCK_REALTIME, CLOCK_BOOTTIME). These are
 	 * non-wakeup timers and should not hold or create a wake lock.
 	 */
-	if (is_file_timerfd(epi->ffd.file) && !timerfd_is_alarm(epi->ffd.file))
+	if (is_file_timerfd(epi->ffd.file) && !timerfd_is_alarm(epi->ffd.file)) {
+		RCU_INIT_POINTER(epi->ws, NULL);
 		return 0;
+	}
 
 	get_task_comm(task_comm_buf, current);
 
@@ -1470,12 +1477,11 @@ static int ep_insert(struct eventpoll *ep, struct epoll_event *event,
 	epi->event = *event;
 	epi->nwait = 0;
 	epi->next = EP_UNACTIVE_PTR;
+	RCU_INIT_POINTER(epi->ws, NULL);
 	if (epi->event.events & EPOLLWAKEUP) {
 		error = ep_create_wakeup_source(epi);
 		if (error)
 			goto error_create_wakeup_source;
-	} else {
-		RCU_INIT_POINTER(epi->ws, NULL);
 	}
 
 	/* Add the current item to the list of active epoll hook for this file */
@@ -1564,7 +1570,12 @@ error_remove_epi:
 		list_del_init(&epi->rdllink);
 	spin_unlock_irqrestore(&ep->lock, flags);
 
-	wakeup_source_unregister(ep_wakeup_source(epi));
+	{
+		struct wakeup_source *ws = ep_wakeup_source(epi);
+		RCU_INIT_POINTER(epi->ws, NULL);
+		if (ws)
+			wakeup_source_unregister(ws);
+	}
 
 error_create_wakeup_source:
 	kmem_cache_free(epi_cache, epi);
