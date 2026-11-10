@@ -4931,7 +4931,6 @@ int ipa3_rx_poll(u32 clnt_hdl, int weight)
 	}
 
 	ep = &ipa3_ctx->ep[clnt_hdl];
-start_poll:
 	while (remain_aggr_weight > 0 &&
 			atomic_read(&ep->sys->curr_polling_state)) {
 		atomic_set(&ipa3_ctx->transport_pm.eot_activity, 1);
@@ -4965,11 +4964,12 @@ start_poll:
 	 */
 	if (cnt < weight && ep->sys->len > IPA_DEFAULT_SYS_YELLOW_WM) {
 		napi_complete(ep->sys->napi_obj);
-		IPA_STATS_INC_CNT(ep->sys->napi_comp_cnt);
 		ret = ipa3_rx_switch_to_intr_mode(ep->sys);
-		if (ret == -GSI_STATUS_PENDING_IRQ &&
-				napi_reschedule(ep->sys->napi_obj))
-			goto start_poll;
+		if (ret == -GSI_STATUS_PENDING_IRQ) {
+			napi_reschedule(ep->sys->napi_obj);
+			return cnt;
+		}
+		IPA_STATS_INC_CNT(ep->sys->napi_comp_cnt);
 
 		if (ipa3_ctx->use_ipa_pm)
 			ipa_pm_deferred_deactivate(ep->sys->pm_hdl);

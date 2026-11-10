@@ -463,6 +463,12 @@ static int ipa3_check_qmi_response(int rc,
 	}
 	if (result != IPA_QMI_RESULT_SUCCESS_V01 &&
 	    ipa3_rmnet_ctx.ipa_rmnet_ssr) {
+		if (error == 48) {
+			IPAWANERR(
+			"Got non-fatal error 48 for request id %d from result %d, ignoring\n",
+			req_id, result);
+			return 0;
+		}
 		IPAWANERR(
 		"Got bad response %d from request id %d (error %d)\n",
 		req_id, result, error);
@@ -700,6 +706,64 @@ static int ipa3_qmi_init_modem_send_sync_msg(void)
 		resp.resp.error, "ipa_init_modem_driver_resp_msg_v01");
 }
 
+static int ipa3_qmi_filter_request_ex_fallback_send(
+	struct ipa_install_fltr_rule_req_ex_msg_v01 *req_ex)
+{
+	struct ipa_install_fltr_rule_req_msg_v01 *req_std;
+	int rc;
+
+	req_std = kzalloc(sizeof(*req_std), GFP_KERNEL);
+	if (!req_std)
+		return -ENOMEM;
+
+	if (req_ex->filter_spec_ex_list_valid &&
+	    req_ex->filter_spec_ex_list_len > 0) {
+		req_std->filter_spec_ex_list_valid = true;
+		req_std->filter_spec_ex_list_len =
+			min_t(u32, req_ex->filter_spec_ex_list_len, QMI_IPA_MAX_FILTERS_V01);
+		memcpy(req_std->filter_spec_ex_list, req_ex->filter_spec_ex_list,
+		       sizeof(struct ipa_filter_spec_ex_type_v01) * req_std->filter_spec_ex_list_len);
+	}
+
+	req_std->source_pipe_index_valid = req_ex->source_pipe_index_valid;
+	req_std->source_pipe_index = req_ex->source_pipe_index;
+	req_std->num_ipv4_filters_valid = req_ex->num_ipv4_filters_valid;
+	req_std->num_ipv4_filters = req_ex->num_ipv4_filters;
+	req_std->num_ipv6_filters_valid = req_ex->num_ipv6_filters_valid;
+	req_std->num_ipv6_filters = req_ex->num_ipv6_filters;
+
+	if (req_ex->xlat_filter_indices_list_valid &&
+	    req_ex->xlat_filter_indices_list_len > 0) {
+		req_std->xlat_filter_indices_list_valid = true;
+		req_std->xlat_filter_indices_list_len =
+			min_t(u32, req_ex->xlat_filter_indices_list_len, QMI_IPA_MAX_FILTERS_V01);
+		memcpy(req_std->xlat_filter_indices_list, req_ex->xlat_filter_indices_list,
+		       sizeof(uint32_t) * req_std->xlat_filter_indices_list_len);
+	}
+
+	if (req_ex->filter_spec_ex2_list_valid &&
+	    req_ex->filter_spec_ex2_list_len > 0) {
+		req_std->filter_spec_ex2_list_valid = true;
+		req_std->filter_spec_ex2_list_len =
+			min_t(u32, req_ex->filter_spec_ex2_list_len, QMI_IPA_MAX_FILTERS_V01);
+		memcpy(req_std->filter_spec_ex2_list, req_ex->filter_spec_ex2_list,
+		       sizeof(struct ipa_filter_spec_ex2_type_v01) * req_std->filter_spec_ex2_list_len);
+	}
+
+	if (req_ex->ul_firewall_indices_list_valid &&
+	    req_ex->ul_firewall_indices_list_len > 0) {
+		req_std->ul_firewall_indices_list_valid = true;
+		req_std->ul_firewall_indices_list_len =
+			min_t(u32, req_ex->ul_firewall_indices_list_len, QMI_IPA_MAX_FILTERS_V01);
+		memcpy(req_std->ul_firewall_indices_list, req_ex->ul_firewall_indices_list,
+		       sizeof(uint32_t) * req_std->ul_firewall_indices_list_len);
+	}
+
+	rc = ipa3_qmi_filter_request_send(req_std);
+	kfree(req_std);
+	return rc;
+}
+
 /* sending filter-install-request to modem*/
 int ipa3_qmi_filter_request_send(struct ipa_install_fltr_rule_req_msg_v01 *req)
 {
@@ -923,6 +987,22 @@ int ipa3_qmi_filter_request_ex_send(
 			QMI_IPA_INSTALL_FILTER_RULE_EX_REQ_V01,
 			rc);
 		return rc;
+	}
+
+	if (resp.resp.result != IPA_QMI_RESULT_SUCCESS_V01) {
+		int fb_rc;
+
+		IPAWANERR("QMI INSTALL_FILTER_RULE_EX failed: result %d, error %d. Trying standard fallback\n",
+			resp.resp.result, resp.resp.error);
+		fb_rc = ipa3_qmi_filter_request_ex_fallback_send(req);
+		if (fb_rc == 0) {
+			IPAWANDBG("standard INSTALL_FILTER_RULE_REQ fallback succeeded\n");
+			return 0;
+		}
+		if (resp.resp.error == 48 || fb_rc == 48) {
+			IPAWANERR("Filter rule request got error 48, treating as non-fatal to preserve WAN data path\n");
+			return 0;
+		}
 	}
 
 	return ipa3_check_qmi_response(rc,

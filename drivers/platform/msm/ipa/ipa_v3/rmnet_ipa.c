@@ -41,9 +41,9 @@
 #include "ipa_trace.h"
 #include "ipa_odl.h"
 
-#define OUTSTANDING_HIGH_DEFAULT 256
-#define OUTSTANDING_HIGH_CTL_DEFAULT (OUTSTANDING_HIGH_DEFAULT + 32)
-#define OUTSTANDING_LOW_DEFAULT 128
+#define OUTSTANDING_HIGH_DEFAULT 2048
+#define OUTSTANDING_HIGH_CTL_DEFAULT (OUTSTANDING_HIGH_DEFAULT + 64)
+#define OUTSTANDING_LOW_DEFAULT 512
 
 static unsigned int outstanding_high = OUTSTANDING_HIGH_DEFAULT;
 module_param(outstanding_high, uint, 0644);
@@ -2170,6 +2170,7 @@ static void ipa3_wwan_setup(struct net_device *dev)
 {
 	dev->netdev_ops = &ipa3_wwan_ops_ip;
 	ether_setup(dev);
+	dev->tx_queue_len = 2000;
 	/* set this after calling ether_setup */
 	dev->header_ops = 0;  /* No header */
 	dev->type = ARPHRD_RAWIP;
@@ -5008,7 +5009,7 @@ static int ipa3_rmnet_poll(struct napi_struct *napi, int budget)
 	int rcvd_pkts = 0;
 
 	rcvd_pkts = ipa_rx_poll(rmnet_ipa3_ctx->ipa3_to_apps_hdl,
-					NAPI_WEIGHT);
+					budget);
 	IPAWANDBG_LOW("rcvd packets: %d\n", rcvd_pkts);
 	return rcvd_pkts;
 }
