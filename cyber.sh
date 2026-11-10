@@ -359,8 +359,8 @@ if [ -d "${ZIP_DIR}" ]; then
                 cp -f "${mod}" "${MODULES_DIR}/${mod_base}"
         done
         if [ -f "anykernel.sh" ]; then
-            sed -i "s/do.modules=.*/do.modules=1/g" anykernel.sh
-            sed -i "s/do.systemless=.*/do.systemless=0/g" anykernel.sh
+            sed -i "s/do.modules=.*/do.modules=0/g" anykernel.sh
+            sed -i "s/do.systemless=.*/do.systemless=1/g" anykernel.sh
         fi
     else
         if [ -f "anykernel.sh" ]; then
